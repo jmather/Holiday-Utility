@@ -1,18 +1,36 @@
 public with sharing class fasHolidayUtils {
+    public static final Integer DAY_SUNDAY = 0;
+    public static final Integer DAY_MONDAY = 1;
+    public static final Integer DAY_TUESDAY = 2;
+    public static final Integer DAY_WEDNESDAY = 3;
+    public static final Integer DAY_THURSDAY = 4;
+    public static final Integer DAY_FRIDAY = 5;
+    public static final Integer DAY_SATURDAY = 6;
+    
+    public static final Integer MASK_SUNDAY = 1;
+    public static final Integer MASK_MONDAY = 2;
+    public static final Integer MASK_TUESDAY = 4;
+    public static final Integer MASK_WEDNESDAY = 8;
+    public static final Integer MASK_THURSDAY = 16;
+    public static final Integer MASK_FRIDAY = 32;
+    public static final Integer MASK_SATURDAY = 64;
+
+
     public static List<Holiday> usHolidayList {
         get {
             if (usHolidayList == null) {
-                usHolidayList = [SELECT activityDate, name, IsRecurrence, RecurrenceType,
-                                        RecurrenceStartDate, recurrencedayofmonth, recurrencedayofweekmask,
+                usHolidayList = [SELECT ActivityDate, Name, IsRecurrence, RecurrenceType,
+                                        RecurrenceStartDate, RecurrenceDayOfMonth, RecurrenceDayOfWeekMask,
                                         RecurrenceInstance, RecurrenceMonthOfYear
                                    FROM Holiday
                                   WHERE RecurrenceType = 'RecursYearly' OR RecurrenceType = 'RecursYearlyNth'
-                               ORDER BY activityDate LIMIT 2000];
+                               ORDER BY ActivityDate LIMIT 2000];
             }
             return usHolidayList;
         }
         set; 
     }
+    
     public static Map<Date, String> usHolidayMap {
         get {
             if (usHolidayMap == null) {
@@ -22,12 +40,13 @@ public with sharing class fasHolidayUtils {
                 Integer month = 01;
                 Date nextHolidayDate;
                 Datetime nextHolidayDateTime;
-                Integer nYearsAgo   = (system.now().addYears(-7)).year();
-                Integer nYearsAhead = (system.now().addYears(7)).year()+1;
-                Integer MONinstances, TUEinstances, WEDinstances, THUinstances, FRIinstances, SATinstances, SUNinstances;
+                Integer nYearsAgo   = (System.now().addYears(-7)).year();
+                Integer nYearsAhead = (System.now().addYears(7)).year()+1;
+                Integer MonInstances = 0, TueInstances = 0, WedInstances = 0, ThuInstances = 0, FriInstances = 0, SatInstances = 0, SunInstances = 0;
+
                 for (Holiday h: usHolidayList) {
-                    system.debug('HOLIDAY='+h.activityDate);
-                    if (! h.IsRecurrence) { usHolidayMap.put(h.activityDate, h.name); continue; }
+                    System.debug('HOLIDAY='+h.ActivityDate);
+                    if (! h.IsRecurrence) { usHolidayMap.put(h.ActivityDate, h.Name); continue; }
                     if (h.RecurrenceMonthOfYear=='January')         { month=01; }
                     else if (h.RecurrenceMonthOfYear=='February')   { month=02; }
                     else if (h.RecurrenceMonthOfYear=='March')      { month=03; }
@@ -46,15 +65,15 @@ public with sharing class fasHolidayUtils {
                     //     SF supported dates: 1700-01-01T00:00:00Z GMT thru 4000-12-31T00:00:00Z GMT
                     if (h.RecurrenceType=='RecursYearly') {
                         for (Integer thisYear=nYearsAgo; thisYear<nYearsAhead; thisYear++) {
-                            usHolidayMap.put(Date.newInstance(thisYear, month, h.recurrencedayofmonth),h.Name);
-                            if ((DateTime.newInstance(thisYear, month, h.recurrencedayofmonth)).format('EEE')=='Sat') {
-                                // nextHolidayDateTime=(DateTime.newInstance(thisYear, month, h.recurrencedayofmonth)).addDays(-1);
-                                // usHolidayMap.put( (date.newInstance(nextHolidayDateTime.year(),nextHolidayDateTime.month(),nextHolidayDateTime.day())),h.Name);
-                                usHolidayMap.put( (date.newInstance(((DateTime.newInstance(thisYear, month, h.recurrencedayofmonth)).addDays(-1)).year(),((DateTime.newInstance(thisYear, month, h.recurrencedayofmonth)).addDays(-1)).month(),((DateTime.newInstance(thisYear, month, h.recurrencedayofmonth)).addDays(-1)).day())),h.Name);
-                            } else if ((DateTime.newInstance(thisYear, month, h.recurrencedayofmonth)).format('EEE')=='Sun') {
-                                // nextHolidayDateTime=(DateTime.newInstance(thisYear, month, h.recurrencedayofmonth)).addDays(1);
-                                // usHolidayMap.put( (date.newInstance(nextHolidayDateTime.year(),nextHolidayDateTime.month(),nextHolidayDateTime.day())),h.Name);
-                                usHolidayMap.put( (date.newInstance(((DateTime.newInstance(thisYear, month, h.recurrencedayofmonth)).addDays(1)).year(),((DateTime.newInstance(thisYear, month, h.recurrencedayofmonth)).addDays(1)).month(),((DateTime.newInstance(thisYear, month, h.recurrencedayofmonth)).addDays(1)).day())),h.Name);
+                            usHolidayMap.put(Date.newInstance(thisYear, month, h.RecurrenceDayOfMonth),h.Name);
+                            if (dayOfWeek(Datetime.newInstance(thisYear, month, h.RecurrenceDayOfMonth)) == DAY_SATURDAY) {
+                                // nextHolidayDateTime=(Datetime.newInstance(thisYear, month, h.RecurrenceDayOfMonth)).addDays(-1);
+                                // usHolidayMap.put( (Date.newInstance(nextHolidayDatetime.year(),nextHolidayDatetime.month(),nextHolidayDatetime.day())),h.Name);
+                                usHolidayMap.put( (Date.newInstance(((Datetime.newInstance(thisYear, month, h.RecurrenceDayOfMonth)).addDays(-1)).year(),((Datetime.newInstance(thisYear, month, h.RecurrenceDayOfMonth)).addDays(-1)).month(),((Datetime.newInstance(thisYear, month, h.RecurrenceDayOfMonth)).addDays(-1)).day())),h.Name);
+                            } else if (dayOfWeek(Datetime.newInstance(thisYear, month, h.RecurrenceDayOfMonth)) == DAY_SUNDAY) {
+                                // nextHolidayDateTime=(Datetime.newInstance(thisYear, month, h.RecurrenceDayOfMonth)).addDays(1);
+                                // usHolidayMap.put( (Date.newInstance(nextHolidayDatetime.year(),nextHolidayDatetime.month(),nextHolidayDatetime.day())),h.Name);
+                                usHolidayMap.put( (Date.newInstance(((Datetime.newInstance(thisYear, month, h.RecurrenceDayOfMonth)).addDays(1)).year(),((Datetime.newInstance(thisYear, month, h.RecurrenceDayOfMonth)).addDays(1)).month(),((Datetime.newInstance(thisYear, month, h.RecurrenceDayOfMonth)).addDays(1)).day())),h.Name);
                             }
                         } // for all 14 years
                     } else { // RecursYearlyNth
@@ -65,44 +84,45 @@ public with sharing class fasHolidayUtils {
                         //  RecurrenceMonthOfYear = January,February,March .... December
                         //  RecurrenceInterval = used as temp field to store occurrence instance
                         for (Integer thisYear=nYearsAgo; thisYear<nYearsAhead; thisYear++) {
-                            MONinstances=0; TUEinstances=0; WEDinstances=0; THUinstances=0; FRIinstances=0; SATinstances=0; SUNinstances=0;
+                            MonInstances = 0; TueInstances = 0; WedInstances = 0; ThuInstances = 0; FriInstances = 0; SatInstances = 0; SunInstances = 0;
                             Date calendarDate = Date.newInstance(thisYear, month, 1);   // First Day of Month
                             monthMap = new Map<Date, Holiday>();
                             do { // scan all the days for the month
                                 Holiday cD = new Holiday();
-                                cD.activityDate=calendarDate;
-                                if ( (DateTime.newInstance(calendarDate.year(), calendarDate.month(), calendarDate.day())).format('EEE')=='Sun') {
-                                    cD.recurrenceinterval=++SUNinstances;
-                                    cD.RecurrenceDayOfWeekMask=1;
-                                } else if ( (DateTime.newInstance(calendarDate.year(), calendarDate.month(), calendarDate.day())).format('EEE')=='Mon') {
-                                    cD.recurrenceinterval=++MONinstances;
-                                    cD.RecurrenceDayOfWeekMask=2;
-                                } else if ( (DateTime.newInstance(calendarDate.year(), calendarDate.month(), calendarDate.day())).format('EEE')=='Tue') {
-                                    cD.recurrenceinterval=++TUEinstances;
-                                    cD.RecurrenceDayOfWeekMask=4;
-                                } else if ( (DateTime.newInstance(calendarDate.year(), calendarDate.month(), calendarDate.day())).format('EEE')=='Wed') {
-                                    cD.recurrenceinterval=++WEDinstances;
-                                    cD.RecurrenceDayOfWeekMask=8;
-                                } else if ( (DateTime.newInstance(calendarDate.year(), calendarDate.month(), calendarDate.day())).format('EEE')=='Thu') {
-                                    cD.recurrenceinterval=++THUinstances;
-                                    cD.RecurrenceDayOfWeekMask=16;
-                                } else if ( (DateTime.newInstance(calendarDate.year(), calendarDate.month(), calendarDate.day())).format('EEE')=='Fri') {
-                                    cD.recurrenceinterval=++FRIinstances;
-                                    cD.RecurrenceDayOfWeekMask=32;
-                                } else if ( (DateTime.newInstance(calendarDate.year(), calendarDate.month(), calendarDate.day())).format('EEE')=='Sat') {
-                                    cD.recurrenceinterval=++SATinstances;
-                                    cD.RecurrenceDayOfWeekMask=64;
+                                cD.ActivityDate=calendarDate;
+                                Integer day = dayOfWeek(Datetime.newInstance(calendarDate.year(), calendarDate.month(), calendarDate.day()));
+                                if (day == DAY_SUNDAY) {
+                                    cD.RecurrenceInterval=++SunInstances;
+                                    cD.RecurrenceDayOfWeekMask= MASK_SUNDAY;
+                                } else if (day == DAY_MONDAY) {
+                                    cD.RecurrenceInterval=++MonInstances;
+                                    cD.RecurrenceDayOfWeekMask= MASK_MONDAY;
+                                } else if (day == DAY_TUESDAY) {
+                                    cD.RecurrenceInterval=++TueInstances;
+                                    cD.RecurrenceDayOfWeekMask= MASK_TUESDAY;
+                                } else if (day == DAY_WEDNESDAY) {
+                                    cD.RecurrenceInterval=++WedInstances;
+                                    cD.RecurrenceDayOfWeekMask= MASK_WEDNESDAY;
+                                } else if (day == DAY_THURSDAY) {
+                                    cD.RecurrenceInterval=++ThuInstances;
+                                    cD.RecurrenceDayOfWeekMask= MASK_THURSDAY;
+                                } else if (day == DAY_FRIDAY) {
+                                    cD.RecurrenceInterval=++FriInstances;
+                                    cD.RecurrenceDayOfWeekMask= MASK_FRIDAY;
+                                } else if (day == DAY_SATURDAY) {
+                                    cD.RecurrenceInterval=++SatInstances;
+                                    cD.RecurrenceDayOfWeekMask= MASK_SATURDAY;
                                 }
                                 monthMap.put(calendarDate,cD);
                                 if (calendarDate.day()>=28)  {
-                                   lastDayOfmonth=calendarDate;    // will contain last Day if loop ends
+                                   lastDayOfMonth=calendarDate;    // will contain last Day if loop ends
                                 }
                                 calendarDate=calendarDate.addDays(1);
                             } while (calendarDate.month()==month);
                             // Identify the holiday
                             if (h.RecurrenceDayOfWeekMask!=127) {
                                 for (Holiday dS : monthMap.values()) { // keep only desired DayOfWeek
-                                    if (h.RecurrenceDayOfWeekMask!=dS.RecurrenceDayOfWeekMask) { monthMap.remove(dS.activitydate); }
+                                    if (h.RecurrenceDayOfWeekMask!=dS.RecurrenceDayOfWeekMask) { monthMap.remove(dS.ActivityDate); }
                                 }
                             }
                             Integer whichInstance = monthMap.size();  // 'Last' instance
@@ -114,7 +134,7 @@ public with sharing class fasHolidayUtils {
                                 usHolidayMap.put(lastDayOfMonth,h.Name);
                             } else {
                                 for (Holiday dS : monthMap.values()) {
-                                    if (whichInstance==dS.recurrenceinterval) { usHolidayMap.put(dS.activityDate,h.Name); continue; }
+                                    if (whichInstance==dS.RecurrenceInterval) { usHolidayMap.put(dS.ActivityDate,h.Name); continue; }
                                 }
                             }
                         }  // for all 14 years
@@ -124,5 +144,13 @@ public with sharing class fasHolidayUtils {
             return usHolidayMap;
         } // get
         set;
+    }
+
+    public static Integer dayOfWeek(Datetime USDate) {
+        return dayOfWeek(USDate.date());
+    }
+
+    public static Integer dayOfWeek(Date USDate) {
+        return Math.mod(Date.newInstance(1900, 1, 7).daysBetween(USDate), 7);
     }
 }
