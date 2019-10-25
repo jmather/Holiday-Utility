@@ -1,49 +1,32 @@
 public with sharing class fasHolidayHelper {
-
-    public static boolean isHoliday(DateTime USdatetime)
+    public static Boolean isHoliday(Datetime USDateTime)
     {
-        Date USdate1 = USdatetime.date();
-        String myHoliday = fasHolidayUtils.usHolidayMap.get(USdate1);
-        if (myHoliday==null)
-           return false;
-        else
-           return true;
+        return isHoliday(USDateTime.date());
     }
 
-    public static boolean isHoliday(Date USdate)
+    public static Boolean isHoliday(Date USDate)
     {
-        Date USdate2 = USdate;
-        String myHoliday = fasHolidayUtils.usHolidayMap.get(USdate2);
-        if (myHoliday==null)
-           return false;
-        else
-           return true;
+        return fasHolidayUtils.usHolidayMap.get(USDate) != null;
     }
 
-    public static boolean isBusinessDay(DateTime USdatetime)
+    public static Boolean isBusinessDay(Datetime USDateTime)
     {
-        Date USdate1 = USdatetime.date();
-        String myHoliday = fasHolidayUtils.usHolidayMap.get(USdate1);
-        if (myHoliday!=null)
-           return false;
-        if ( (USdatetime.format('EEE')=='Sat') || ( USdatetime.format('EEE')=='Sun') ) {
-           return false;
-        }
-        return true;
+        return isBusinessDay(USDateTime.date());
     }
 
-    public static boolean isBusinessDay (Date USdate)
+    public static Boolean isBusinessDay(Date USDate)
     {
-        Date USdate2 = USdate;
-        String myHoliday = fasHolidayUtils.usHolidayMap.get(USdate2);
-        if (myHoliday!=null)
-            return false;
-        if ( ((DateTime.newInstance(USdate2.year(), USdate2.month(), USdate2.day())).format('EEE')=='Sat') ||
-             ((DateTime.newInstance(USdate2.year(), USdate2.month(), USdate2.day())).format('EEE')=='Sun') ) {
+        if (isHoliday(USDate)) {
             return false;
         }
-        return true;
+
+        //jan 1 1900 is known to be a Monday; ergo Jan 7 1900 is a Sunday. we use the # of days between
+        //and modulo arithmetic. 0 = Sunday, 6 = Saturday.
+        Integer weekday = Math.mod(Date.newInstance(1900, 1, 7).daysBetween(USDate), 7);
+
+        return 1 <= weekday && weekday <= 5;
     }
+
     Public Map<Date,String> GetHolidays(Date startDate,Date endDate ){
 
         List<Holiday> holidays = [SELECT ActivityDate, Name, IsRecurrence, RecurrenceType, 
